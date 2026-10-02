@@ -5,7 +5,7 @@ from Discriminator import Discriminator
 from Generator import Generator
 
 
-class GAN:
+class GAN(nn.Module):
     def __init__(self) -> None:
         self.generator = Generator()
         self.bsize = 32
