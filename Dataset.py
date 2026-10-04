@@ -24,7 +24,7 @@ class Voxelize(BaseTransform):
         idx = ((pos + 1) / 2 * (self.R - 1)).round().long()
         grid = torch.zeros(self.R, self.R, self.R)
         grid[idx[:, 0], idx[:, 1], idx[:, 2]] = 1.0
-        data.x = grid.unsqueeze(0)  # [1, R, R, R] -> batch: [B, R, R, R]
+        data.x = grid.unsqueeze(0) # [1, R, R, R] -> batch: [B, 1, R, R, R]
         return data
 
     def __repr__(self):
@@ -39,4 +39,4 @@ class ModelNet10:
             pre_filter=SelectClass(class_id),
             pre_transform=T.Compose([T.SamplePoints(2048), Voxelize(R)]),
         )
-        self.loader = DataLoader(self.train_dataset, batch_size=batch_size, shuffle=True)
+        self.loader = DataLoader(self.train_dataset, batch_size=batch_size, shuffle=True, )

@@ -9,11 +9,12 @@ import torch
 import numpy as np
 
 class TrainProcesss:
-    def __init__(self, model, vm: VersionManager, epochs=1000, device=torch.device('cpu')) -> None:
+    def __init__(self, model: GAN, vm: VersionManager, epochs=1000, device=torch.device('cpu')) -> None:
+        torch.autograd.set_detect_anomaly(True)
         self.gan = model
         self.ds = ModelNet10()
-        self.writer = SummaryWriter(f'runs/{self.vm.name}')
         self.vm = vm
+        self.writer = SummaryWriter(f'runs/{self.vm.name}')
         self.cepoch = 0
         self.device = device
         self.epochs = epochs
@@ -36,7 +37,7 @@ class TrainProcesss:
         avgd_loss = []
         avgg_loss = []
         mbgd_epoch = 1
-        for x_batch, _ in self.ds.loader:
+        for x_batch in self.ds.loader:
             g, d = step_fn(x_batch)
             
             avgg_loss.append(g)
@@ -47,24 +48,27 @@ class TrainProcesss:
         return np.mean(avgg_loss), np.mean(avgd_loss)
 
     def step_fn(self, x_batch):
-        real = x_batch.to(torch.float32).to(self.device)
+        real = x_batch.x
+        real = real.detach().unsqueeze(1)
         latent_vector = torch.randn(32, 100, 1, 1, 1, device=self.device)
         fake = self.gan.generator(latent_vector)
+        
         d_loss = self.gan.compute_d_loss(self.criterion, real, fake)
+        
+        d_loss.backward()
+        self.doptim.step()
+        self.doptim.zero_grad()
+        
         g_loss = self.gan.compute_g_loss(self.criterion, fake)
+        
+        g_loss.backward()
+        self.goptim.step()
+        self.goptim.zero_grad()
         
         self.writer.add_scalar("MBGD/Generator", g_loss.item(), self.gstep)
         self.writer.add_scalar("MBGD/Discriminator", d_loss.item(), self.gstep)
         self.writer.add_scalars('MBGD/Generator-Discriminator', {'generator': g_loss.item(), 'discriminator': d_loss.item()}, self.gstep)
         
-        self.doptim.zero_grad()
-        d_loss.backward()
-        self.doptim.step()
-
-        self.goptim.zero_grad()
-        g_loss.backward()
-        self.goptim.step()
-
         return (g_loss, d_loss)
         
     def train(self):
