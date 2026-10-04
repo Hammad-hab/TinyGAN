@@ -4,3 +4,5 @@ lib
 share
 .DS_Store
 data/
+runs/
+runs/*
