@@ -50,7 +50,7 @@ class TrainProcesss:
     def step_fn(self, x_batch):
         real = x_batch.x
         real = real.detach().unsqueeze(1)
-        latent_vector = torch.randn(32, 100, 1, 1, 1, device=self.device)
+        latent_vector = torch.randn(self.ds.batch_size, 100, 1, 1, 1, device=self.device)
         fake = self.gan.generator(latent_vector)
         
         d_loss = self.gan.compute_d_loss(self.criterion, real, fake)

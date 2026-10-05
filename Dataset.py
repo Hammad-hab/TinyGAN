@@ -32,6 +32,7 @@ class Voxelize(BaseTransform):
 
 class ModelNet10:
     def __init__(self, class_id=2, R=32, batch_size=32):
+        self.batch_size = batch_size
         self.train_dataset = ModelNet(
             root="data/ModelNet10",
             name="10",

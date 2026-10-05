@@ -4,6 +4,7 @@ from VersionManager import VersionManager
 from util import get_device
 
 model = GAN()
+device = get_device()
 vm = VersionManager(model, 'tiny-gan')
 tp = TrainProcesss(model, vm, 1000)
 vm.load_latest(True, True)
