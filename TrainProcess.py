@@ -37,7 +37,12 @@ class TrainProcesss:
         avgd_loss = []
         avgg_loss = []
         mbgd_epoch = 1
-        for x_batch in self.ds.loader:
+        for i, x_batch in enumerate(self.ds.loader):
+            print(
+                "batch:", i,
+                "x:", x_batch.x.shape,
+                "batch_size:", x_batch.x.shape[0],
+            )
             g, d = step_fn(x_batch)
             
             avgg_loss.append(g)

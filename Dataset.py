@@ -40,4 +40,4 @@ class ModelNet10:
             pre_filter=SelectClass(class_id),
             pre_transform=T.Compose([T.SamplePoints(2048), Voxelize(R)]),
         )
-        self.loader = DataLoader(self.train_dataset, batch_size=batch_size, shuffle=True, )
+        self.loader = DataLoader(self.train_dataset, batch_size=batch_size, shuffle=True, drop_last=True)

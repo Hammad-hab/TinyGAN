@@ -13,7 +13,9 @@ class GAN(nn.Module):
         self.discriminator = Discriminator()
 
     def compute_d_loss(self, criterion, real, fake):
-        d_real = criterion(self.discriminator(real), torch.ones(self.bsize, 1))
+        pred = self.discriminator(real)
+        # print('real, prediction', real.shape, pred.shape)
+        d_real = criterion(pred, torch.ones(self.bsize, 1))
         d_fake = criterion(self.discriminator(fake.detach()), torch.zeros(self.bsize, 1))
         d_loss = d_real + d_fake
 
