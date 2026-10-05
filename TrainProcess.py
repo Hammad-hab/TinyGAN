@@ -45,8 +45,8 @@ class TrainProcesss:
             )
             g, d = step_fn(x_batch)
             
-            avgg_loss.append(g)
-            avgd_loss.append(d)
+            avgg_loss.append(g.detach().numpy())
+            avgd_loss.append(d.detach().numpy())
             mbgd_epoch += 1
             self.gstep += 1
             
