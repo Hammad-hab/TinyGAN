@@ -21,5 +21,15 @@ class GAN(nn.Module):
 
         return d_loss
 
+    def compute_detailed_d_loss(self, criterion, real, fake):
+        rl = self.discriminator(real)
+        fk = self.discriminator(fake.detach())
+        # print('real, prediction', real.shape, pred.shape)
+        d_real = criterion(rl, torch.ones(self.bsize, 1))
+        d_fake = criterion(fk, torch.zeros(self.bsize, 1))
+        d_loss = d_real + d_fake
+
+        return (d_loss, d_real, d_fake, rl, fk)
+
     def compute_g_loss(self, criterion, fake):
         return criterion(self.discriminator(fake), torch.ones(self.bsize, 1))

@@ -38,7 +38,6 @@ class TrainProcesss:
         avgg_loss = []
         mbgd_epoch = 1
         for x_batch in self.ds.loader:
-   
             g, d = step_fn(x_batch)
             
             avgg_loss.append(g.detach().numpy())
@@ -54,7 +53,12 @@ class TrainProcesss:
         latent_vector = torch.randn(self.ds.batch_size, 100, 1, 1, 1, device=self.device)
         fake = self.gan.generator(latent_vector)
         
-        d_loss = self.gan.compute_d_loss(self.criterion, real, fake)
+        ddl = self.gan.compute_detailed_d_loss(self.criterion, real, fake)
+        d_loss = ddl[0]
+        dreal = ddl[1]
+        dfake = ddl[2]
+        preal = ddl[3]
+        pfake = ddl[4]
         
         d_loss.backward()
         self.doptim.step()
@@ -68,6 +72,12 @@ class TrainProcesss:
         
         self.writer.add_scalar("MBGD/Generator", g_loss.item(), self.gstep)
         self.writer.add_scalar("MBGD/Discriminator", d_loss.item(), self.gstep)
+        self.writer.add_scalar("MBGD/Discriminator-Real", dreal.item(), self.gstep)
+        self.writer.add_scalar("MBGD/Discriminator-Fake", dfake.item(), self.gstep)
+
+        self.writer.add_scalar("MBGD/Discriminator-Real-Prob", preal.detach().numpy().mean(), self.gstep)
+        self.writer.add_scalar("MBGD/Discriminator-Fake-Prob", pfake.detach().numpy().mean(), self.gstep)
+        
         self.writer.add_scalars('MBGD/Generator-Discriminator', {'generator': g_loss.item(), 'discriminator': d_loss.item()}, self.gstep)
         
         return (g_loss, d_loss)

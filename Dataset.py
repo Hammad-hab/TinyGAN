@@ -1,8 +1,12 @@
+import open3d as o3d
 from torch_geometric.loader import DataLoader
 import torch_geometric.transforms as T
 from torch_geometric.transforms import BaseTransform
 from torch_geometric.datasets import ModelNet
-import torch
+from skimage.measure import marching_cubes
+import numpy as np
+import pyvista as pv
+from scipy import ndimage
 
 class SelectClass:
     def __init__(self, id):
@@ -41,3 +45,15 @@ class ModelNet10:
             pre_transform=T.Compose([T.SamplePoints(2048), Voxelize(R)]),
         )
         self.loader = DataLoader(self.train_dataset, batch_size=batch_size, shuffle=True, drop_last=True)
+
+if __name__ == '__main__':
+    ds = ModelNet10()
+    xbtch = next(iter(ds.loader))
+    vol = xbtch.x.detach().numpy()[1]  # explicit torch -> numpy
+    vertices, faces, normals, values = marching_cubes(vol, level=0.5)
+    
+    pcd = o3d.geometry.PointCloud()
+    pcd.points = o3d.utility.Vector3dVector(
+        np.ascontiguousarray(vertices, dtype=np.float64)
+    )
+    o3d.visualization.draw_geometries([pcd])
