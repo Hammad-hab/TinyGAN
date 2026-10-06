@@ -19,8 +19,8 @@ class TrainProcesss:
         self.device = device
         self.epochs = epochs
         self.gstep = 0
-        self.doptim = AdamW(self.gan.discriminator.parameters(), lr=1e-4)
-        self.goptim = AdamW(self.gan.generator.parameters(), lr=1e-4)
+        self.doptim = AdamW(self.gan.discriminator.parameters(), lr=1e-4, betas=(0.5, 0.999))
+        self.goptim = AdamW(self.gan.generator.parameters(), lr=1e-4, betas=(0.5, 0.999))
         
         self.dscheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
             self.doptim, T_max=self.epochs, eta_min=1e-7
@@ -37,12 +37,8 @@ class TrainProcesss:
         avgd_loss = []
         avgg_loss = []
         mbgd_epoch = 1
-        for i, x_batch in enumerate(self.ds.loader):
-            print(
-                "batch:", i,
-                "x:", x_batch.x.shape,
-                "batch_size:", x_batch.x.shape[0],
-            )
+        for x_batch in self.ds.loader:
+   
             g, d = step_fn(x_batch)
             
             avgg_loss.append(g.detach().numpy())

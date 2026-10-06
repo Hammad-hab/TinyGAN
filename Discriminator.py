@@ -20,5 +20,5 @@ class Discriminator(nn.Module):
         x = F.relu(self.c3(x))
         x = F.relu(self.c4(x))
         x = self.flat(x)
-        x = F.relu(self.l5(x))
+        x = self.l5(x)
         return self.s4(x)
