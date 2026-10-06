@@ -1,4 +1,4 @@
-import open3d as o3d
+# import open3d as o3d
 from torch_geometric.loader import DataLoader
 import torch_geometric.transforms as T
 from torch_geometric.transforms import BaseTransform

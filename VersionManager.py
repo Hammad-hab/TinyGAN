@@ -96,28 +96,32 @@ class VersionManager:
         raise FileNotFoundError(f'Could not find file {path}')
 
     def load_epoch(self, epoch, inplace=False):
-        path, status = self._filepth(f"{self.dir}/{self.name}-{epoch}")
-        if status == 1:
-            print(f'[WARNING] epoch {epoch} was not trained completely, it might not behave properly')
-
-        payload = torch.load(path)
-
-        # Backward compatibility with old checkpoints that were just a raw model state_dict
+        path, status = self._filepth(
+            f"{self.dir}/{self.name}-{epoch}"
+        )
+    
+        payload = torch.load(
+            path,
+            map_location="cpu"
+        )
+    
+    
         if isinstance(payload, dict) and "model" in payload:
             model_state = payload["model"]
             optim_state = payload.get("optim")
         else:
             model_state = payload
             optim_state = None
-
+    
         if inplace:
-            self._model.load_state_dict(model_state)
+            result = self._model.load_state_dict(model_state)
+    
             if self._optim is not None:
                 if optim_state is not None:
+                    print("[H] About to load optimizer", flush=True)
                     self._optim.load_state_dict(optim_state)
-                else:
-                    print('[WARNING] No optimizer state found in checkpoint; optimizer left unloaded')
-
+                    print("[I] Optimizer loaded", flush=True)
+    
         return payload
 
     def _try_failed_save(self):
