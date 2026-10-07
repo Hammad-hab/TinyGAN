@@ -1,4 +1,4 @@
-from torch.nn.modules.loss import BCELoss
+from torch.nn.modules.loss import BCEWithLogitsLoss
 
 from Dataset import ModelNet10
 from GAN import GAN
@@ -30,7 +30,7 @@ class TrainProcesss:
         )
         
         self.lossess = []
-        self.criterion = BCELoss()
+        self.criterion = BCEWithLogitsLoss()
         
 
     def mbgd_step(self, step_fn):
@@ -51,8 +51,10 @@ class TrainProcesss:
         real = x_batch.x
         real = real.detach().unsqueeze(1)
         latent_vector = torch.randn(self.ds.batch_size, 100, 1, 1, 1, device=self.device)
+        
         fake = self.gan.generator(latent_vector)
         
+        self.doptim.zero_grad()
         ddl = self.gan.compute_detailed_d_loss(self.criterion, real, fake)
         d_loss = ddl[0]
         dreal = ddl[1]
@@ -62,13 +64,12 @@ class TrainProcesss:
         
         d_loss.backward()
         self.doptim.step()
-        self.doptim.zero_grad()
-        
+
+        self.goptim.zero_grad()
         g_loss = self.gan.compute_g_loss(self.criterion, fake)
         
         g_loss.backward()
         self.goptim.step()
-        self.goptim.zero_grad()
         
         self.writer.add_scalar("MBGD/Generator", g_loss.item(), self.gstep)
         self.writer.add_scalar("MBGD/Discriminator", d_loss.item(), self.gstep)

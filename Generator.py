@@ -13,5 +13,5 @@ class Generator(nn.Module):
         x = F.relu(self.c5(z))
         x = F.relu(self.c6(x))
         x = F.relu(self.c7(x))
-        x = F.sigmoid(self.c8(x)) 
+        x = self.c8(x)
         return x

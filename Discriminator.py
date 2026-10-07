@@ -11,14 +11,13 @@ class Discriminator(nn.Module):
         self.c4 = nn.Conv3d(64, 64, 3, 1, 1) # 4 -> 4 
         self.flat = nn.Flatten() # [64, 4, 4, 4] -> 4096
         self.l5 = nn.Linear(4096, 1)
-        self.s4 = nn.Sigmoid()
         
     def forward(self, x):
-        x = F.relu(self.c1(x))
-        x = F.relu(self.c2(x))
-        x = F.relu(self.c23(x))
-        x = F.relu(self.c3(x))
-        x = F.relu(self.c4(x))
+        x = F.leaky_relu(self.c1(x))
+        x = F.leaky_relu(self.c2(x))
+        x = F.leaky_relu(self.c23(x))
+        x = F.leaky_relu(self.c3(x))
+        x = F.leaky_relu(self.c4(x))
         x = self.flat(x)
         x = self.l5(x)
-        return self.s4(x)
+        return x
