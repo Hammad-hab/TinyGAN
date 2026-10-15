@@ -1,9 +1,10 @@
 from torch.nn.modules.loss import BCEWithLogitsLoss
 
 from Dataset import ModelNet10
-from GAN import GAN
+from GAN import GAN, compute_norm
 from torch.optim import AdamW
 from torch.utils.tensorboard import SummaryWriter
+from Generator import Generator
 from VersionManager import VersionManager
 import torch
 import numpy as np
@@ -48,13 +49,15 @@ class TrainProcesss:
         return np.mean(avgg_loss), np.mean(avgd_loss)
 
     def step_fn(self, x_batch):
+        self.doptim.zero_grad()
+        self.goptim.zero_grad()
+        
         real = x_batch.x
         real = real.detach().unsqueeze(1)
         latent_vector = torch.randn(self.ds.batch_size, 100, 1, 1, 1, device=self.device)
         
         fake = self.gan.generator(latent_vector)
         
-        self.doptim.zero_grad()
         ddl = self.gan.compute_detailed_d_loss(self.criterion, real, fake)
         d_loss = ddl[0]
         dreal = ddl[1]
@@ -64,22 +67,27 @@ class TrainProcesss:
         
         d_loss.backward()
         self.doptim.step()
-
-        self.goptim.zero_grad()
+        
+        self.doptim.zero_grad()
+        self.goptim.zero_grad() 
+        
         g_loss = self.gan.compute_g_loss(self.criterion, fake)
-        
         g_loss.backward()
+        
+        gnorm = compute_norm(self.gan.generator)
         self.goptim.step()
-        
-        self.writer.add_scalar("MBGD/Generator", g_loss.item(), self.gstep)
-        self.writer.add_scalar("MBGD/Discriminator", d_loss.item(), self.gstep)
-        self.writer.add_scalar("MBGD/Discriminator-Real", dreal.item(), self.gstep)
-        self.writer.add_scalar("MBGD/Discriminator-Fake", dfake.item(), self.gstep)
 
-        self.writer.add_scalar("MBGD/Discriminator-Real-Prob", preal.detach().numpy().mean(), self.gstep)
-        self.writer.add_scalar("MBGD/Discriminator-Fake-Prob", pfake.detach().numpy().mean(), self.gstep)
+        self.writer.add_scalar("Batch/Generator/Loss", g_loss.item(), self.gstep)
+        self.writer.add_scalar("Batch/Generator/Gradient Norm", gnorm.item(), self.gstep)
         
-        self.writer.add_scalars('MBGD/Generator-Discriminator', {'generator': g_loss.item(), 'discriminator': d_loss.item()}, self.gstep)
+        self.writer.add_scalar("Batch/Discriminator/Loss", d_loss.item(), self.gstep)
+        self.writer.add_scalar("Batch/Discriminator/Real Loss", dreal.item(), self.gstep)
+        self.writer.add_scalar("Batch/Discriminator/Fake Loss", dfake.item(), self.gstep)
+
+        self.writer.add_scalar("Batch/Discriminator/Real Score", preal.detach().numpy().mean(), self.gstep)
+        self.writer.add_scalar("Batch/Discriminator/Fake Score", pfake.detach().numpy().mean(), self.gstep)
+        
+        self.writer.add_scalars('Batch/Loss Comparison', {'generator': g_loss.item(), 'discriminator': d_loss.item()}, self.gstep)
         
         return (g_loss, d_loss)
         
@@ -91,9 +99,9 @@ class TrainProcesss:
             self.vm.setEpoch(self.cepoch)
             
             ag, ad = self.mbgd_step(self.step_fn)
-            self.writer.add_scalar("AVG/Generator", ag.item(), self.cepoch)
-            self.writer.add_scalar("AVG/Discriminator", ad.item(), self.cepoch)
-            self.writer.add_scalars('AVG/Generator-Discriminator', {'generator': ag.item(), 'discriminator': ad.item()}, self.cepoch)
+            self.writer.add_scalar("Epoch/Generator/Loss", ag.item(), self.cepoch)
+            self.writer.add_scalar("Epoch/Discriminator/Loss", ad.item(), self.cepoch)
+            self.writer.add_scalars('Epoch/Loss Comparison', {'generator': ag.item(), 'discriminator': ad.item()}, self.cepoch)
 
             self.cepoch += 1
             self.lossess.append((ag, ad))

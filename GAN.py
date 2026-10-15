@@ -5,6 +5,10 @@ from Discriminator import Discriminator
 from Generator import Generator
 
 
+def compute_norm(model):
+    total_norm = nn.utils.clip_grad_norm_(model.parameters(), float('inf'))
+    return total_norm
+
 class GAN(nn.Module):
     def __init__(self) -> None:
         super().__init__()
