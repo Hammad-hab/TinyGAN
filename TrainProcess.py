@@ -24,7 +24,7 @@ class TrainProcesss:
         self.goptim = AdamW(self.gan.generator.parameters(), lr=1e-4, betas=(0.5, 0.999))
         
         self.dscheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
-            self.doptim, T_max=self.epochs, eta_min=1e-7
+            self.doptim, T_max=self.epochs, eta_min=1e-8
         )
         self.gscheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
             self.goptim, T_max=self.epochs, eta_min=1e-7
@@ -43,6 +43,7 @@ class TrainProcesss:
             
             avgg_loss.append(g.detach().numpy())
             avgd_loss.append(d.detach().numpy())
+                
             mbgd_epoch += 1
             self.gstep += 1
             
@@ -59,14 +60,16 @@ class TrainProcesss:
         fake = self.gan.generator(latent_vector)
         
         ddl = self.gan.compute_detailed_d_loss(self.criterion, real, fake)
-        d_loss = ddl[0]
-        dreal = ddl[1]
-        dfake = ddl[2]
-        preal = ddl[3]
-        pfake = ddl[4]
-        
-        d_loss.backward()
-        self.doptim.step()
+        d_loss, dreal, dfake, preal, pfake = ddl
+
+        acc = ((preal > 0).float().mean() + (pfake < 0).float().mean())/2
+
+        # D is updated only when its accuracy < 80%, following the 3D-GAN training scheme
+        # (Wu et al., NeurIPS 2016, https://arxiv.org/abs/1610.07584).
+        if acc < 0.8:
+            self.doptim.zero_grad()
+            d_loss.backward()
+            self.doptim.step()
         
         self.doptim.zero_grad()
         self.goptim.zero_grad() 
