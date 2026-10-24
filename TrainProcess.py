@@ -2,7 +2,7 @@ from torch.nn.modules.loss import BCEWithLogitsLoss
 
 from Dataset import ModelNet10
 from GAN import GAN, compute_norm
-from torch.optim import AdamW
+from torch.optim import AdamW, Adam
 from torch.utils.tensorboard import SummaryWriter
 from Generator import Generator
 from VersionManager import VersionManager
@@ -11,7 +11,6 @@ import numpy as np
 
 class TrainProcesss:
     def __init__(self, model: GAN, vm: VersionManager, epochs=1000, device=torch.device('cpu')) -> None:
-        torch.autograd.set_detect_anomaly(True)
         self.gan = model
         self.ds = ModelNet10()
         self.vm = vm
@@ -20,8 +19,9 @@ class TrainProcesss:
         self.device = device
         self.epochs = epochs
         self.gstep = 0
-        self.doptim = AdamW(self.gan.discriminator.parameters(), lr=1e-4, betas=(0.5, 0.999))
-        self.goptim = AdamW(self.gan.generator.parameters(), lr=1e-4, betas=(0.5, 0.999))
+        self.doptim = Adam(self.gan.discriminator.parameters(), lr=1e-4, betas=(0.0, 0.9))
+        self.goptim = Adam(self.gan.generator.parameters(),     lr=1e-4, betas=(0.0, 0.9))
+        self.real_iter = self._infinite(self.ds.loader)
         
         self.dscheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
             self.doptim, T_max=self.epochs, eta_min=1e-8
@@ -32,67 +32,53 @@ class TrainProcesss:
         
         self.lossess = []
         self.criterion = BCEWithLogitsLoss()
-        
+
+
+    @staticmethod
+    def _infinite(loader):
+        while True:
+            yield from loader
 
     def mbgd_step(self, step_fn):
-        avgd_loss = []
-        avgg_loss = []
-        mbgd_epoch = 1
-        for x_batch in self.ds.loader:
-            g, d = step_fn(x_batch)
-            
-            avgg_loss.append(g.detach().numpy())
-            avgd_loss.append(d.detach().numpy())
-                
-            mbgd_epoch += 1
-            self.gstep += 1
-            
-        return np.mean(avgg_loss), np.mean(avgd_loss)
+         gl, dl = [], []
+         for _ in range(len(self.ds.loader)):          # one "epoch" = len(loader) G steps
+             g, d = step_fn()
+             gl.append(g); dl.append(d)
+             self.gstep += 1
+         return np.mean(gl), np.mean(dl)
 
-    def step_fn(self, x_batch):
-        self.doptim.zero_grad()
-        self.goptim.zero_grad()
+    
         
-        real = x_batch.x
-        real = real.detach().unsqueeze(1)
-        latent_vector = torch.randn(self.ds.batch_size, 100, 1, 1, 1, device=self.device)
-        
-        fake = self.gan.generator(latent_vector)
-        
-        ddl = self.gan.compute_detailed_d_loss(self.criterion, real, fake)
-        d_loss, dreal, dfake, preal, pfake = ddl
-
-        acc = ((preal > 0).float().mean() + (pfake < 0).float().mean())/2
-
-        # D is updated only when its accuracy < 80%, following the 3D-GAN training scheme
-        # (Wu et al., NeurIPS 2016, https://arxiv.org/abs/1610.07584).
-        if acc < 0.8:
+    def step_fn(self):
+        G, D = self.gan.generator, self.gan.discriminator
+        B = self.ds.batch_size
+        w_est = []
+    
+        for _ in range(5):
+            real = next(self.real_iter).x.detach().unsqueeze(1).to(self.device)
+            z = torch.randn(real.size(0), 100, 1, 1, 1, device=self.device)
+            fake = G(z).detach()
+    
+            d_real, d_fake = D(real).mean(), D(fake).mean()
+            d_loss = d_fake - d_real + 10 * self.gan.gradient_penalty(real, fake)
+    
             self.doptim.zero_grad()
             d_loss.backward()
             self.doptim.step()
-        
-        self.doptim.zero_grad()
-        self.goptim.zero_grad() 
-        
-        g_loss = self.gan.compute_g_loss(self.criterion, fake)
+            w_est.append((d_real - d_fake).item())
+    
+        z = torch.randn(B, 100, 1, 1, 1, device=self.device)
+        g_loss = -D(G(z)).mean()
+        self.goptim.zero_grad()
         g_loss.backward()
-        
-        gnorm = compute_norm(self.gan.generator)
+        gnorm = compute_norm(G)
         self.goptim.step()
-
+    
+        w = float(np.mean(w_est))
         self.writer.add_scalar("Batch/Generator/Loss", g_loss.item(), self.gstep)
         self.writer.add_scalar("Batch/Generator/Gradient Norm", gnorm.item(), self.gstep)
-        
-        self.writer.add_scalar("Batch/Discriminator/Loss", d_loss.item(), self.gstep)
-        self.writer.add_scalar("Batch/Discriminator/Real Loss", dreal.item(), self.gstep)
-        self.writer.add_scalar("Batch/Discriminator/Fake Loss", dfake.item(), self.gstep)
-
-        self.writer.add_scalar("Batch/Discriminator/Real Score", preal.detach().numpy().mean(), self.gstep)
-        self.writer.add_scalar("Batch/Discriminator/Fake Score", pfake.detach().numpy().mean(), self.gstep)
-        
-        self.writer.add_scalars('Batch/Loss Comparison', {'generator': g_loss.item(), 'discriminator': d_loss.item()}, self.gstep)
-        
-        return (g_loss, d_loss)
+        self.writer.add_scalar("Batch/Critic/Wasserstein Estimate", w, self.gstep)
+        return g_loss.item(), w
         
     def train(self):
         self.gan.discriminator.train()

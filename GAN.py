@@ -25,6 +25,13 @@ class GAN(nn.Module):
 
         return d_loss
 
+    def gradient_penalty(self,real, fake):
+       # real.size(0) is the batch size
+       a = torch.rand(real.size(0), 1, 1, 1, 1, device=real.device)
+       x = (a * real + (1 - a) * fake).requires_grad_(True)
+       g, = torch.autograd.grad(self.discriminator(x).sum(), x, create_graph=True)
+       return ((g.flatten(1).norm(dim=1) - 1) ** 2).mean()
+    
     def compute_detailed_d_loss(self, criterion, real, fake):
         rl = self.discriminator(real)
         fk = self.discriminator(fake.detach())
