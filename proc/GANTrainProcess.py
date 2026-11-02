@@ -1,11 +1,9 @@
 from torch.nn.modules.loss import BCEWithLogitsLoss
-
-from Dataset import ModelNet10
-from GAN import GAN, compute_norm
-from torch.optim import AdamW, Adam
+from dsets.ModelNet10 import ModelNet10
+from models.GAN import GAN, compute_norm
+from torch.optim import Adam
 from torch.utils.tensorboard import SummaryWriter
-from Generator import Generator
-from VersionManager import VersionManager
+from utils.VersionManager import VersionManager
 import torch
 import numpy as np
 
@@ -54,7 +52,7 @@ class TrainProcesss:
         B = self.ds.batch_size
         w_est = []
     
-        for _ in range(5):
+        for _ in range(3):
             real = next(self.real_iter).x.detach().unsqueeze(1).to(self.device)
             z = torch.randn(real.size(0), 100, 1, 1, 1, device=self.device)
             fake = G(z).detach()
@@ -83,16 +81,23 @@ class TrainProcesss:
     def train(self):
         self.gan.discriminator.train()
         self.gan.generator.train()
-        
-        for e in range(self.epochs):
-            self.vm.setEpoch(self.cepoch)
+
+        start = self.vm.startepoch
+        self.cepoch = start
+        for _ in range(start):          # fast-forward LR schedule
+            self.dscheduler.step()
+            self.gscheduler.step()
+            
+        for e in range(start, self.epochs):
+            self.vm.setEpoch(e)
             
             ag, ad = self.mbgd_step(self.step_fn)
             self.writer.add_scalar("Epoch/Generator/Loss", ag.item(), self.cepoch)
-            self.writer.add_scalar("Epoch/Discriminator/Loss", ad.item(), self.cepoch)
-            self.writer.add_scalars('Epoch/Loss Comparison', {'generator': ag.item(), 'discriminator': ad.item()}, self.cepoch)
+            self.writer.add_scalar("Epoch/Critic/Mean Wasserstein Estimate", ad.item(), self.cepoch)
+            self.writer.add_scalars('Epoch/Loss Comparison', {'generator': ag.item(), 'critic': ad.item()}, self.cepoch)
 
             self.cepoch += 1
+       
             self.lossess.append((ag, ad))
 
             self.dscheduler.step()

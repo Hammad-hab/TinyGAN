@@ -1,0 +1,9 @@
+{
+  "include": ["datasets", "models", "proc", "utils", "gan-train.py", "SampleGeneration.py", "view.py"],
+  "exclude": ["lib", "bin", "include", "share", "runs", "versions", "data"],
+  "extraPaths": ["."],
+  "venvPath": "..",
+  "venv": "TinyGAN",
+  "pythonVersion": "3.9",
+  "typeCheckingMode": "standard"
+}

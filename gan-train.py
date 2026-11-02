@@ -1,7 +1,7 @@
-from GAN import GAN
-from TrainProcess import TrainProcesss
-from VersionManager import VersionManager
-from util import get_device
+from models.GAN import GAN
+from proc.GANTrainProcess import TrainProcesss
+from utils.VersionManager import VersionManager
+from utils import get_device
 
 model = GAN()
 device = get_device()

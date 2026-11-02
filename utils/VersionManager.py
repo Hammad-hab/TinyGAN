@@ -19,7 +19,10 @@ class VersionManager:
     def setOptim(self, optim):
         self._optim = optim
 
-    def save(self, failprotocol=False):
+    def save(self, epoch=None, failprotocol=False):
+        if epoch is not None:
+            self._epoch = epoch
+            
         if self._epoch == 0:
             print('Not Saving at 0th epoch')
             return

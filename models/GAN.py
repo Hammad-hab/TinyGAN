@@ -1,8 +1,8 @@
-from Dataset import ModelNet10
+from dsets.ModelNet10 import ModelNet10
 from torch import nn
 import torch
-from Discriminator import Discriminator
-from Generator import Generator
+from .Discriminator import Discriminator
+from .Generator import Generator
 
 
 def compute_norm(model):
@@ -28,7 +28,10 @@ class GAN(nn.Module):
     def gradient_penalty(self,real, fake):
        # real.size(0) is the batch size
        a = torch.rand(real.size(0), 1, 1, 1, 1, device=real.device)
+       
        x = (a * real + (1 - a) * fake).requires_grad_(True)
+       # 
+       #  Discrimiantor outputs [N,1]
        g, = torch.autograd.grad(self.discriminator(x).sum(), x, create_graph=True)
        return ((g.flatten(1).norm(dim=1) - 1) ** 2).mean()
     

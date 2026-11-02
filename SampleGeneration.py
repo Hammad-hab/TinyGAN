@@ -1,8 +1,8 @@
-from GAN import GAN
-from VersionManager import VersionManager
+from models.GAN import GAN
+from utils.VersionManager import VersionManager
 import torch
 import numpy as np
-from util import get_device
+from utils import get_device
 import time
 
 
