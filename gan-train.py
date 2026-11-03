@@ -7,7 +7,8 @@ model = GAN()
 device = get_device()
 vm = VersionManager(model, 'tiny-gan')
 tp = TrainProcesss(model, vm, 1000)
-vm.load_latest(True, True)
+vm.load_latest(True, False)
+print('Loaded Model Succesfully')
 
 @vm.save_on_fail
 def main():

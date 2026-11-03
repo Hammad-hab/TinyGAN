@@ -79,6 +79,7 @@ class TrainProcesss:
         return g_loss.item(), w
         
     def train(self):
+        print('[TRAIN]: Beginning training')
         self.gan.discriminator.train()
         self.gan.generator.train()
 
@@ -90,6 +91,7 @@ class TrainProcesss:
             
         for e in range(start, self.epochs):
             self.vm.setEpoch(e)
+            # print(e)
             
             ag, ad = self.mbgd_step(self.step_fn)
             self.writer.add_scalar("Epoch/Generator/Loss", ag.item(), self.cepoch)

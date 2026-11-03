@@ -44,7 +44,7 @@ class VersionManager:
     def load_latest(self, inplace=False, silent=False):
         prefix = f"{self.name}-"
         epochs = []
-
+        
         for f in os.listdir(self.dir):
             if not f.startswith(prefix):
                 continue
@@ -63,7 +63,7 @@ class VersionManager:
                 epochs.append(int(name))
             except ValueError:
                 continue
-
+        
         if not epochs:
             if silent:
                 print('[WARNING]: This is the first time the model is being trained, no previous saves exist')
@@ -77,7 +77,7 @@ class VersionManager:
         path, status = self._filepth(
             f"{self.dir}/{self.name}-{latest}"
         )
-
+        
         self._epoch = latest
 
         if status == 1:
@@ -102,12 +102,15 @@ class VersionManager:
         path, status = self._filepth(
             f"{self.dir}/{self.name}-{epoch}"
         )
+
+        print('H4')
     
         payload = torch.load(
             path,
             map_location="cpu"
         )
     
+        print('H2')
     
         if isinstance(payload, dict) and "model" in payload:
             model_state = payload["model"]
@@ -115,16 +118,19 @@ class VersionManager:
         else:
             model_state = payload
             optim_state = None
+        print('H3')
     
         if inplace:
+            print('H1.25')
             result = self._model.load_state_dict(model_state)
-    
+            print('H1.5')
             if self._optim is not None:
                 if optim_state is not None:
                     print("[H] About to load optimizer", flush=True)
                     self._optim.load_state_dict(optim_state)
+                    print('H1.75')
                     print("[I] Optimizer loaded", flush=True)
-    
+        print('H1')
         return payload
 
     def _try_failed_save(self):
