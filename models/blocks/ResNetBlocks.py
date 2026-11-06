@@ -64,15 +64,15 @@ class ResNetDecoderBlock(nn.Module):
             of the input and x2 (output of the second layer) match. It uses ksize=1 and the
             same stride as the main path, so it upsamples the input the same way.
         """
-    def __init__(self, in_channels, out_channels, time_emb_d, stride=2) -> None:
-        self.cd1 = nn.ConvTranspose2d(in_channels, out_channels, kernel_size=3, stride=stride, padding=0, output_padding=1)
+    def __init__(self, in_channels, out_channels, time_emb_d, stride=2, padding=0, output_padding=1) -> None:
+        self.cd1 = nn.ConvTranspose2d(in_channels, out_channels, kernel_size=3, stride=stride, padding=padding, output_padding=output_padding)
         self.bn1 = nn.BatchNorm2d(out_channels)
         self.cd2 =  nn.ConvTranspose2d(in_channels, out_channels, kernel_size=3, stride=1, padding=0, output_padding=0)
         self.bn2 = nn.BatchNorm2d(out_channels)
 
         self.time_injector = nn.Linear(time_emb_d, out_channels)
 
-        self.skip_feature = nn.ConvTranspose2d(in_channels, out_channels, kernel_size=3, stride=stride, padding=0, output_padding=1)
+        self.skip_feature = nn.ConvTranspose2d(in_channels, out_channels, kernel_size=3, stride=stride, padding=padding, output_padding=output_padding)
 
     def forward(self, x0, time):
         x1 = F.silu(self.bn1(self.cd1(x0)))
