@@ -2,6 +2,7 @@ from torch.nn import MSELoss
 import torch
 from torch.optim import AdamW
 from torch.optim.lr_scheduler import CosineAnnealingLR
+from torch.utils.tensorboard import SummaryWriter
 from torch_geometric.nn.fx import Sequential
 from dsets.SolidWood import SolidWood
 from utils import fdGetNoisy
@@ -19,6 +20,7 @@ class TrainProcess:
         self.start = self.vm.startepoch
         self.ns = Scheduler(1000)
         self.adamw = AdamW(self.model.parameters(), lr=0.001)
+        self.writer = SummaryWriter()
         # Todo, add proper cosine annealing
         # self.scheduler = CosineAnnealingLR(self.adamw)
         
@@ -45,4 +47,3 @@ class TrainProcess:
             self.vm.setEpoch(e)
             
             self.vm.save()
-            ...
