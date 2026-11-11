@@ -11,10 +11,11 @@ import numpy as np
 
 from utils.VersionManager import VersionManager
 
-class TrainProcess:
-    def __init__(self, vm) -> None:
+class TrainProcesss:
+    def __init__(self, model, vm, epochs=1000,) -> None:
         self.criterion = MSELoss()
-        self.model = Sequential()
+        self.model = model
+        self.epochs = epochs
         self.ds = SolidWood()
         self.vm: VersionManager = vm
         self.start = self.vm.startepoch
@@ -28,7 +29,7 @@ class TrainProcess:
         avg = []
         for batch in self.ds.loader:
             t = torch.randint(0, 1000, (batch.shape[0],))
-            xt, eps = fdGetNoisy(batch, self.ns, t)
+            xt, eps = fdGetNoisy(batch, t, self.ns)
             xp = self.model(xt, t)
             loss = self.criterion(xp, eps)
             loss.backward()
@@ -39,11 +40,11 @@ class TrainProcess:
             
         return np.mean(avg) 
 
-    def train(self, epochs):
+    def train(self):
         self.model.train()
 
-        for e in range(self.start, epochs):
+        for e in range(self.start, self.epochs):
             loss = self.mbgd()
             self.vm.setEpoch(e)
-            
+            self.writer.add_scalar('UNET/Loss', loss)
             self.vm.save()
